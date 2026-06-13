@@ -10,10 +10,11 @@ This skill teaches you how to translate natural-language Trello requests into sa
 Try these in order — use whichever works first:
 
 1. `trello` on `PATH`
-2. `./bin/trello` (relative to the repo root)
-3. Build from the repo: `go build -o bin/trello ./cmd/trello`
+2. `~/go/bin/trello` — the `go install` default (`GOBIN`). A `go install ./cmd/trello` often lands here while *not* being on `PATH`, so check it explicitly before falling back to a build.
+3. `./bin/trello` (relative to the repo root)
+4. Build from the repo: `go build -o bin/trello ./cmd/trello`
 
-Once resolved, use that path for all subsequent commands in the session.
+Once resolved, use that path for all subsequent commands in the session. If the resolved path is not on `PATH`, prefix it (e.g. `export PATH="$HOME/go/bin:$PATH"`) so multi-command workflows stay readable.
 
 ## Preflight: Check Auth
 
@@ -51,6 +52,8 @@ Every Trello task follows this shape:
 3. **Verify** — re-fetch the resource to confirm the change took effect
 
 This matters because the CLI uses IDs, not names. Never guess an ID — always discover it first.
+
+Every id (and every other input) is passed as a **named flag**, never positionally. `trello cards get <id>` fails with `VALIDATION_ERROR: --card is required`; the id must be `--card <id>`. The short slug in a card URL (`trello.com/c/<slug>/...`) works directly as the `--card` value.
 
 **Example:** "Create a card in the Doing list on the Marketing board"
 1. `trello boards list` → find Marketing board ID

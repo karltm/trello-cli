@@ -84,6 +84,8 @@ attachments delete --card <card-id> --attachment <attachment-id>
 
 Validation: `add-file` requires existing local path. `add-url` requires `http://` or `https://`.
 
+No **download**: there is no `attachments get`/`download` subcommand. `attachments list` returns each attachment's `url`, but the CLI cannot fetch the file bytes. Downloading an uploaded attachment requires the authenticated Trello REST API (`GET .../download/...` with the `key`+`token`) — credentials the CLI keeps in the OS keyring and does not expose, so an agent often cannot retrieve them. Treat attachment *contents* as out of reach via this CLI; surface the `url` to the user instead.
+
 ## Custom Fields
 
 ```
