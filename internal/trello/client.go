@@ -92,6 +92,7 @@ type API interface {
 	AddFileAttachment(ctx context.Context, cardID, filePath string, name *string) (Attachment, error)
 	AddURLAttachment(ctx context.Context, cardID, urlStr string, name *string) (Attachment, error)
 	DeleteAttachment(ctx context.Context, cardID, attachmentID string) error
+	DownloadAttachment(ctx context.Context, cardID, attachmentID string) (io.ReadCloser, Attachment, error)
 	// Labels
 	ListLabels(ctx context.Context, boardID string) ([]Label, error)
 	CreateLabel(ctx context.Context, boardID, name, color string) (Label, error)

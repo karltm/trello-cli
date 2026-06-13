@@ -165,6 +165,39 @@ func TestAddFileAttachment(t *testing.T) {
 	}
 }
 
+func TestDownloadAttachmentSkipsAuthForExternalHost(t *testing.T) {
+	var externalAuth string
+	external := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		externalAuth = r.Header.Get("Authorization")
+		if _, err := io.WriteString(w, "external"); err != nil {
+			t.Fatalf("WriteString() error: %v", err)
+		}
+	}))
+	defer external.Close()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewEncoder(w).Encode(map[string]any{
+			"id": "a1", "name": "link", "url": external.URL + "/file", "bytes": 8, "isUpload": false,
+		}); err != nil {
+			t.Fatalf("Encode() error: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	client := trello.NewClient(server.URL, "mykey", "mytoken", trello.DefaultClientOptions())
+	body, _, err := client.DownloadAttachment(context.Background(), "c1", "a1")
+	if err != nil {
+		t.Fatalf("DownloadAttachment() error: %v", err)
+	}
+	defer body.Close()
+	if _, err := io.ReadAll(body); err != nil {
+		t.Fatalf("ReadAll() error: %v", err)
+	}
+	if externalAuth != "" {
+		t.Errorf("credentials leaked to external host: Authorization = %q", externalAuth)
+	}
+}
+
 func TestDeleteAttachment(t *testing.T) {
 	var capturedMethod string
 	var capturedPath string

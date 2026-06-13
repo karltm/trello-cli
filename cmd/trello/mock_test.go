@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"io"
 	"testing"
 
 	"github.com/Scale-Flow/trello-cli/internal/auth"
@@ -44,6 +45,7 @@ type mockAPI struct {
 	addFileAttachmentFn        func(ctx context.Context, cardID, filePath string, name *string) (trello.Attachment, error)
 	addURLAttachmentFn         func(ctx context.Context, cardID, urlStr string, name *string) (trello.Attachment, error)
 	deleteAttachmentFn         func(ctx context.Context, cardID, attachmentID string) error
+	downloadAttachmentFn       func(ctx context.Context, cardID, attachmentID string) (io.ReadCloser, trello.Attachment, error)
 	listLabelsFn               func(ctx context.Context, boardID string) ([]trello.Label, error)
 	createLabelFn              func(ctx context.Context, boardID, name, color string) (trello.Label, error)
 	addLabelToCardFn           func(ctx context.Context, cardID, labelID string) error
@@ -282,6 +284,13 @@ func (m *mockAPI) DeleteAttachment(ctx context.Context, cardID, attachmentID str
 		return m.deleteAttachmentFn(ctx, cardID, attachmentID)
 	}
 	return nil
+}
+
+func (m *mockAPI) DownloadAttachment(ctx context.Context, cardID, attachmentID string) (io.ReadCloser, trello.Attachment, error) {
+	if m.downloadAttachmentFn != nil {
+		return m.downloadAttachmentFn(ctx, cardID, attachmentID)
+	}
+	return nil, trello.Attachment{}, nil
 }
 
 // Labels
@@ -575,6 +584,9 @@ func setupTestAuth(t *testing.T) {
 	resetSubFlag("attachments", "add-url", "name", "")
 	resetSubFlag("attachments", "delete", "card", "")
 	resetSubFlag("attachments", "delete", "attachment", "")
+	resetSubFlag("attachments", "download", "card", "")
+	resetSubFlag("attachments", "download", "attachment", "")
+	resetSubFlag("attachments", "download", "out", "")
 	resetSubFlag("labels", "list", "board", "")
 	resetSubFlag("labels", "create", "board", "")
 	resetSubFlag("labels", "create", "name", "")

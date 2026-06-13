@@ -80,11 +80,12 @@ attachments list --card <card-id>
 attachments add-file --card <card-id> --path <local-path> [--name <display-name>]
 attachments add-url --card <card-id> --url <http-or-https-url> [--name <display-name>]
 attachments delete --card <card-id> --attachment <attachment-id>
+attachments download --card <card-id> --attachment <attachment-id> [--out <path-or-dir>]
 ```
 
 Validation: `add-file` requires existing local path. `add-url` requires `http://` or `https://`.
 
-No **download**: there is no `attachments get`/`download` subcommand. `attachments list` returns each attachment's `url`, but the CLI cannot fetch the file bytes. Downloading an uploaded attachment requires the authenticated Trello REST API (`GET .../download/...` with the `key`+`token`) — credentials the CLI keeps in the OS keyring and does not expose, so an agent often cannot retrieve them. Treat attachment *contents* as out of reach via this CLI; surface the `url` to the user instead.
+**Download** fetches the file bytes to disk. `--out` may be a file path or an existing directory; omit it to write the attachment's own name into the current directory. The result reports the saved `path` and `bytes`. This works for uploaded attachments because the CLI sends its keyring credentials in an `Authorization` header (the `.../download/...` endpoint rejects query-string `key`/`token`); the header is sent only to `trello.com` hosts, so credentials are never leaked to the third-party URLs that link-style attachments point at (those are fetched unauthenticated and may not be downloadable).
 
 ## Custom Fields
 

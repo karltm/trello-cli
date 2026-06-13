@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Scale-Flow/trello-cli/internal/credentials"
@@ -103,6 +106,67 @@ func TestAttachmentsAddURLInvalidURL(t *testing.T) {
 	setupTestAuth(t)
 	credStore.Set("default", credentials.Credentials{APIKey: "k", Token: "t", AuthMode: "manual"})
 	assertContractCode(t, executeRootArgs("attachments", "add-url", "--card", "c1", "--url", "notaurl"), "VALIDATION_ERROR")
+}
+
+func TestAttachmentsDownloadCommand(t *testing.T) {
+	setupTestAuth(t)
+	credStore.Set("default", credentials.Credentials{APIKey: "k", Token: "t", AuthMode: "manual"})
+	dir := t.TempDir()
+	apiClient = &mockAPI{
+		downloadAttachmentFn: func(ctx context.Context, cardID, attachmentID string) (io.ReadCloser, trello.Attachment, error) {
+			if cardID != "c1" || attachmentID != "a1" {
+				t.Fatalf("card/attachment = %q/%q", cardID, attachmentID)
+			}
+			return io.NopCloser(strings.NewReader("payload")), trello.Attachment{ID: "a1", Name: "report.pdf"}, nil
+		},
+	}
+
+	out := filepath.Join(dir, "saved.pdf")
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetArgs([]string{"attachments", "download", "--card", "c1", "--attachment", "a1", "--out", out})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("attachments download failed: %v", err)
+	}
+
+	got, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("ReadFile() error: %v", err)
+	}
+	if string(got) != "payload" {
+		t.Errorf("file contents = %q, want payload", got)
+	}
+
+	var envelope map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &envelope); err != nil {
+		t.Fatalf("invalid JSON: %v\nraw: %s", err, buf.String())
+	}
+	data := envelope["data"].(map[string]any)
+	if data["path"] != out || data["bytes"].(float64) != 7 {
+		t.Fatalf("data = %+v", data)
+	}
+}
+
+func TestAttachmentsDownloadDefaultsToAttachmentName(t *testing.T) {
+	setupTestAuth(t)
+	credStore.Set("default", credentials.Credentials{APIKey: "k", Token: "t", AuthMode: "manual"})
+	dir := t.TempDir()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("Chdir() error: %v", err)
+	}
+	apiClient = &mockAPI{
+		downloadAttachmentFn: func(ctx context.Context, cardID, attachmentID string) (io.ReadCloser, trello.Attachment, error) {
+			// Server-supplied name with a path component must be reduced to its base.
+			return io.NopCloser(strings.NewReader("data")), trello.Attachment{ID: "a1", Name: "../escape.txt"}, nil
+		},
+	}
+
+	if err := executeRootArgs("attachments", "download", "--card", "c1", "--attachment", "a1"); err != nil {
+		t.Fatalf("attachments download failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "escape.txt")); err != nil {
+		t.Fatalf("expected escape.txt in cwd: %v", err)
+	}
 }
 
 func TestAttachmentsDeleteCommand(t *testing.T) {

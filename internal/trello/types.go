@@ -147,6 +147,14 @@ type DeleteResult struct {
 	ID      string `json:"id"`
 }
 
+// DownloadResult is the response shape for attachment downloads.
+type DownloadResult struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Path  string `json:"path"`
+	Bytes int64  `json:"bytes"`
+}
+
 // ActionResult is the response shape for void add/remove operations
 // (labels add, labels remove, members add, members remove).
 type ActionResult struct {
